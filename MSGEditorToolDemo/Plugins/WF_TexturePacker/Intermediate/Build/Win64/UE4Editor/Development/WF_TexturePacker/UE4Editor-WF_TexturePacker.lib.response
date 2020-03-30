@@ -1,0 +1,13 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UE4Editor-WF_TexturePacker.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"C:\Users\sethb\Documents\Unreal Projects\MSGDemos\MSGDemos\MSGEditorToolDemo\Intermediate\Build\Win64\MSGEditorToolDemoEditor\Development\UnrealEd\SharedPCH.UnrealEd.h.obj"
+"C:\Users\sethb\Documents\Unreal Projects\MSGDemos\MSGDemos\MSGEditorToolDemo\Plugins\WF_TexturePacker\Intermediate\Build\Win64\UE4Editor\Development\WF_TexturePacker\Module.WF_TexturePacker.cpp.obj"
+"C:\Users\sethb\Documents\Unreal Projects\MSGDemos\MSGDemos\MSGEditorToolDemo\Plugins\WF_TexturePacker\Intermediate\Build\Win64\UE4Editor\Development\WF_TexturePacker\Module.WF_TexturePacker.gen.cpp.obj"
+"C:\Users\sethb\Documents\Unreal Projects\MSGDemos\MSGDemos\MSGEditorToolDemo\Plugins\WF_TexturePacker\Intermediate\Build\Win64\UE4Editor\Development\WF_TexturePacker\PCLaunch.rc.res"
+/OUT:"C:\Users\sethb\Documents\Unreal Projects\MSGDemos\MSGDemos\MSGEditorToolDemo\Plugins\WF_TexturePacker\Intermediate\Build\Win64\UE4Editor\Development\WF_TexturePacker\UE4Editor-WF_TexturePacker.lib"
