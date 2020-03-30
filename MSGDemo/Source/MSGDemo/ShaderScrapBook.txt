@@ -1,0 +1,160 @@
+/** Rotates Position about the given axis by the given angle, in radians, and returns the offset to Position. */
+float3 RotateAboutAxis(float4 NormalizedRotationAxisAndAngle, float3 PositionOnAxis, float3 Position)
+
+==================================================================================================================================
+// evaluate distance
+float s1 = distance(sphere1.xyz, curPos) - sphere1.w; // packed the radius into the alpha channel
+float s2 = distance(sphere2.xyz, curPos) - sphere2.w;
+
+float3 rotationAxis = float3(0, cos(3), sin(3));
+float rotationAngle = frac(View.GameTime * 0.1) + -0.7798;
+rotationAngle *= 6.28318548;
+float3 pivotPoint = float3(-2.25, 0, 0);
+
+float3 sphere3Loc = sphere3.xyz + RotateAboutAxis(float4(rotationAxis, rotationAngle), pivotPoint, float3(sphere3.xyz));
+
+float s3 = distance(sphere3Loc, curPos) - sphere3.w;
+
+// create ripple in center metaball
+float dot1 = dot(normalize(curPos - sphere1.xyz), float3(n, n, 0)) - 1;
+float dot2 = sin(dot1 * 2 + (t * 2)) * 1.5;
+dot2 += sin(dot1 * 24 + (t * 8)) * 0.07;
+s1 -= dot2;
+
+dot1 = dot(normalize(curPos - sphere2.xyz), float3(n, n, 0)) - 2;
+dot2 = sin(dot1 * 2 + (t * 2)) * 1.5;
+dot2 += sin(dot1 * 24 + (t * 8)) * 0.07;
+s2 -= dot2;
+
+dot1 = dot(normalize(curPos - sphere3.xyz), float3(n, n, 0)) - 3;
+dot2 = sin(dot1 * 2 + (t * 2)) * 1.5;
+dot2 += sin(dot1 * 24 + (t * 8)) * 0.07;
+s3 -= dot2;
+
+// smooth mins
+float h = saturate(0.5 + 0.5 * (s2 - s1) / k);
+s2 = lerp(s2, s1, h) - k * h * (1.0 - h);
+
+h = saturate(0.5 + 0.5 * (s3 - s2) / k);
+float curdf = lerp(s3, s2, h) - k * h * (1.0 - h);
+
+return curdf;
+==================================================================================================================================
+
+==================================================================================================================================
+// evaluate distance 2
+int step = 0;
+float curMin = 0;
+
+while(step < numSpheres)
+{
+	float centerOffset, radius, centerMult;
+	if(step == 0)
+	{
+		centerOffset = 0;
+		radius = centerRadius;
+		centerMult = 0;
+	}
+	else
+	{
+		centerOffset = centerRadius;
+		radius = orbitRadius;
+		centerMult = 1;
+	}
+
+	// rotate about an axis
+	float3 rotationAxis = float3(0, cos(step), sin(step));
+	float rotationAngle = frac(View.GameTime * (orbitsPerSecond + (orbitSpeedOffset / max(step, 1)))) + (orbitBeginOffset * step);
+	rotationAngle *= 6.28318548; // roughly PI * 2, this is to set the Period for our Cosine and Sine functions
+	float3 sphereLoc = float3(centerOffset + (step * distanceFromCenter) - ((distanceFromCenter / 2) * centerMult), 0, 0); // used to be step * (radius * 2)) - (radius * centerMult)
+	sphereLoc = sphereLoc + RotateAboutAxis(float4(rotationAxis, rotationAngle), pivotPoint, sphereLoc);
+
+	float s = distance(sphereLoc, curPos) - radius;
+
+	// create ripple effect
+	float dot1 = dot(normalize(curPos - sphereLoc), float3(n, n, 0)) - step;
+	float dot2 = sin(dot1 * 2 + (t * 2)) * 1.5;
+	dot2 += sin(dot1 * 24 + (t * 8)) * 0.07;
+	s -= dot2;
+
+	// get smooth min
+	if(step == 0)
+	{
+		curMin = s;
+	}
+	else
+	{
+		float h = saturate(0.5 + 0.5 * (s - curMin) / k);
+		curMin = lerp(s, curMin, h) - k * h * (1.0 - h);
+	}
+
+	step++;
+}
+
+return curMin;
+==================================================================================================================================
+
+==================================================================================================================================
+// metaballs simple
+float3 camVec = normalize(worldPos - View.WorldViewOrigin);
+float3 curPos = worldPos;
+float3 normal = 0;
+
+int maxSteps = 64;
+float curDist, accum = 0;
+float minStepSize = 0.01;
+
+int i = 0;
+while(i < maxSteps)
+{
+	curDist = CustomExpression0(Parameters, curPos, k, t, n, numSpheres, orbitsPerSecond, orbitBeginOffset, pivotPoint, centerRadius, orbitRadius, orbitSpeedOffset, distanceFromCenter);
+
+	if(curDist < threshold)
+	{
+		// add normals
+		curPos += camVec * curDist;
+
+		normal.x = CustomExpression0(Parameters, curPos + float3(1, 0, 0) * offset, k, t, n, numSpheres, orbitsPerSecond, orbitBeginOffset, pivotPoint, centerRadius, orbitRadius, orbitSpeedOffset, distanceFromCenter);
+		normal.y = CustomExpression0(Parameters, curPos + float3(0, 1, 0) * offset, k, t, n, numSpheres, orbitsPerSecond, orbitBeginOffset, pivotPoint, centerRadius, orbitRadius, orbitSpeedOffset, distanceFromCenter);
+		normal.z = CustomExpression0(Parameters, curPos + float3(0, 0, 1) * offset, k, t, n, numSpheres, orbitsPerSecond, orbitBeginOffset, pivotPoint, centerRadius, orbitRadius, orbitSpeedOffset, distanceFromCenter);
+		normal = normalize(normal);
+		camVec = lerp(camVec, -normal, refraction);
+
+		// add density
+		int j = 0;
+		while(j < 16)
+		{
+			curDist = CustomExpression0(Parameters, curPos, k, t, n, numSpheres, orbitsPerSecond, orbitBeginOffset, pivotPoint, centerRadius, orbitRadius, orbitSpeedOffset, distanceFromCenter);
+			if(curDist < shadowMult)
+			{
+				curDist = max(0, curDist);
+				accum += shadowMult - curDist;
+			}
+
+			curPos += camVec * 10;
+			j++;
+		}
+
+		return float4(normal, accum);
+	}
+
+	curPos += camVec * max(minStepSize, curDist);
+	minStepSize += 0.02;
+	i++;
+}
+
+return 0;
+==================================================================================================================================
+
+
+
+
+
+
+// graph
+float diff = (a - b) / k;
+diff = saturate(0.5 * (diff + 1));
+
+float blend = lerp(a, b, diff);
+blend -= diff * (1 - diff) * k;
+return blend;
